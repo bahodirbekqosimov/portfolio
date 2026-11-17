@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+:root {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --primary-orange: #f97316;
+  --primary-orange-hover: #ea580c;
+  --primary-orange-active: #c2410c;
+}
+
+/* Light Mode Defaults */
+html.light, .light {
+  --bg-main: #fafafa;
+  --bg-subtle: #f4f4f5;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --border-color: #e4e4e7;
+  --border-focus: #f97316;
+  --text-main: #18181b;
+  --text-muted: #52525b;
+  --text-subtle: #71717a;
+  color-scheme: light;
+}
+
+/* Dark Mode Defaults (Default) */
+html.dark, .dark, :root:not(.light) {
+  --bg-main: #09090b;
+  --bg-subtle: #121215;
+  --bg-card: #18181b;
+  --bg-card-hover: #222226;
+  --border-color: #27272a;
+  --border-focus: #f97316;
+  --text-main: #f4f4f5;
+  --text-muted: #a1a1aa;
+  --text-subtle: #71717a;
+  color-scheme: dark;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  min-height: 100vh;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  overflow-x: hidden;
+}
+
+/* Orange Accent Highlights */
+.bg-accent-orange {
+  background-color: #ea580c;
+}
+.bg-accent-orange:hover {
+  background-color: #c2410c;
+}
+.border-accent-orange {
+  border-color: #ea580c;
+}
+.text-accent-orange {
+  color: #ea580c;
+}
+
+/* Active navigation item requirement:
+   "Active navigation items and selected controls should have an orange background and border." */
+.nav-active {
+  background-color: #ea580c !important;
+  border-color: #ea580c !important;
+  color: #ffffff !important;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(160, 160, 160, 0.25);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(160, 160, 160, 0.45);
+}

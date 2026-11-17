@@ -1,0 +1,33 @@
+# Maxfiy sozlamalar: hech qachon GitHub'ga chiqmasin
+.env
+.env.*
+!.env.example
+*.env
+*.pem
+*.key
+
+# Ma'lumotlar bazasi va zaxira nusxalar (foydalanuvchilar, parol hashlari)
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.bak
+
+# Foydalanuvchilar yuklagan fayllar
+backend/media/*
+!backend/media/.gitkeep
+
+# Kutubxonalar, build va kesh
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.next/
+*.tsbuildinfo
+
+# Muharrir va asboblar
+.claude/
+.vscode/
+.idea/
+.DS_Store

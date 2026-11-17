@@ -1,0 +1,28 @@
+# Web (uvicorn, python-multipart, email-validator, httpx shu ichida keladi)
+fastapi[standard]>=0.115
+pydantic-settings
+
+# Baza
+sqlalchemy[asyncio]>=2.0.36
+aiosqlite
+alembic
+# Postgres'ga o'tganda izohdan chiqaring:
+asyncpg
+
+# Auth (JWT va parol hash)
+pyjwt
+pwdlib[argon2]
+
+# Email tasdiqlash kodi
+aiosmtplib
+
+# Rasm tekshirish va slug
+pillow
+
+# CV (PDF) yasash
+fpdf2
+python-slugify
+
+# Testlar
+pytest
+pytest-asyncio
