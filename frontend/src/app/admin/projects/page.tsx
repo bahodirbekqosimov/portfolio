@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { ProjectAdminOut, SkillOut, UploadOut } from "@/types/api";
+import { confirmDialog, notify } from "@/lib/dialog";
 
 export default function AdminProjectsPage() {
   const [projects, setProjects] = useState<ProjectAdminOut[]>([]);
@@ -99,7 +100,7 @@ export default function AdminProjectsPage() {
       const res = await api.post<UploadOut>("/api/v1/admin/uploads/", formData);
       setImage(res.url);
     } catch (err: any) {
-      alert(err.message || "Failed to upload image");
+      notify(err.message || "Failed to upload image");
     } finally {
       setUploadingImage(false);
     }
@@ -131,19 +132,19 @@ export default function AdminProjectsPage() {
       setModalOpen(false);
       await fetchProjectsAndSkills();
     } catch (err: any) {
-      alert(err.message || "Failed to save project");
+      notify(err.message || "Failed to save project");
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDelete = async (id: number, title: string) => {
-    if (!confirm(`Are you sure you want to delete project "${title}"?`)) return;
+    if (!(await confirmDialog(`Are you sure you want to delete project "${title}"?`))) return;
     try {
       await api.delete(`/api/v1/admin/projects/${id}/`);
       await fetchProjectsAndSkills();
     } catch (err: any) {
-      alert(err.message || "Failed to delete project");
+      notify(err.message || "Failed to delete project");
     }
   };
 

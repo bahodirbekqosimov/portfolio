@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     smtp_port: int = 587
     smtp_user: str = ""
     smtp_password: str = ""
+    # Xatdagi "From" manzili. Bo'sh bo'lsa SMTP_USER ishlatiladi (masalan Gmail).
+    # Brevo kabi relay'da login boshqa bo'ladi, shuning uchun alohida: noreply@bahodirbek.uz.
+    email_from: str = ""
     email_from_name: str = "bahodirbek.uz"
 
     email_code_ttl_minutes: int = 15
@@ -31,6 +34,10 @@ class Settings(BaseSettings):
     email_code_max_attempts: int = 5
 
     complaints_to_delete: int = 3
+
+    @property
+    def email_sender(self) -> str:
+        return self.email_from or self.smtp_user
 
     @model_validator(mode="after")
     def _check_production(self) -> "Settings":

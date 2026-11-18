@@ -199,27 +199,33 @@ async def post_detail(slug: str, session: SessionDep, user: OptionalUser):
     dependencies=[Depends(rate_limit("reaction", 60))],
 )
 async def toggle_reaction(slug: str, payload: ReactionToggleIn, session: SessionDep, user: CurrentUser):
-    """Bir marta bosilsa qo'shiladi, yana bosilsa olib tashlanadi."""
+    """Har foydalanuvchining postga bitta reaksiyasi bor.
+
+    Yangi emoji bosilsa qo'yiladi (eskisi almashtiriladi), xuddi shu emoji yana bosilsa olib tashlanadi.
+    """
     post = await _get_published_post(session, slug)
     emoji = await session.scalar(select(Emoji).where(Emoji.id == payload.emoji_id, Emoji.is_active))
     if emoji is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "This reaction does not exist.")
 
-    condition = and_(
-        Reaction.post_id == post.id, Reaction.user_id == user.id, Reaction.emoji_id == emoji.id
+    current = await session.scalar(
+        select(Reaction).where(Reaction.post_id == post.id, Reaction.user_id == user.id)
     )
-    existed = await session.scalar(select(Reaction.id).where(condition))
-    if existed:
-        await session.execute(delete(Reaction).where(Reaction.id == existed))
-        await session.commit()
+    if current is not None and current.emoji_id == emoji.id:
+        await session.delete(current)
+        reacted = False
+    elif current is not None:
+        current.emoji_id = emoji.id
+        reacted = True
     else:
         session.add(Reaction(post_id=post.id, user_id=user.id, emoji_id=emoji.id))
-        try:
-            await session.commit()
-        except IntegrityError:  # ikki marta tez bosilganda
-            await session.rollback()
+        reacted = True
+    try:
+        await session.commit()
+    except IntegrityError:  # ikki marta tez bosilganda
+        await session.rollback()
     return ReactionToggleOut(
-        reacted=not existed, reactions=await reaction_summary(session, post.id, user)
+        reacted=reacted, reactions=await reaction_summary(session, post.id, user)
     )
 
 

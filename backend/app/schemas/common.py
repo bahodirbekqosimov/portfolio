@@ -10,7 +10,12 @@ RequiredMediaUrl = Annotated[str, AfterValidator(media_url)]
 
 # Kiruvchi rasm maydoni: `/admin/uploads/` qaytargan `path` yoki `url`, yoki tashqi https havola.
 _MEDIA_PATH_DOC = "`/admin/uploads/` javobidagi `path` (yoki `url`) yoki tashqi rasm havolasi."
-MediaPathIn = Annotated[str | None, BeforeValidator(to_media_path), Field(max_length=255, description=_MEDIA_PATH_DOC)]
+# max_length faqat matnga qo'llanadi: bo'sh yoki null rasm (rasm olib tashlandi) xato bermasligi kerak.
+MediaPathIn = Annotated[
+    Annotated[str, StringConstraints(max_length=255)] | None,
+    BeforeValidator(to_media_path),
+    Field(description=_MEDIA_PATH_DOC),
+]
 RequiredMediaPathIn = Annotated[
     str, BeforeValidator(to_media_path), Field(min_length=1, max_length=255, description=_MEDIA_PATH_DOC)
 ]

@@ -265,6 +265,18 @@ async def admin_create_emoji(payload: schemas.EmojiCreate, session: SessionDep):
     return emoji
 
 
+@router.post("/emojis/bulk_delete/", response_model=schemas.EmojiBulkDeleteOut)
+async def admin_bulk_delete_emojis(payload: schemas.EmojiBulkDeleteIn, session: SessionDep):
+    """Belgilangan emojilarni bitta so'rovda o'chiradi (reaksiyalari bilan). Topilmagan id'lar e'tiborsiz qoldiriladi."""
+    ids = set(payload.ids)
+    images = list(await session.scalars(select(Emoji.image).where(Emoji.id.in_(ids))))
+    await session.execute(delete(Emoji).where(Emoji.id.in_(ids)))
+    await session.commit()
+    for image in images:
+        delete_file(image)
+    return schemas.EmojiBulkDeleteOut(deleted=len(images))
+
+
 @router.patch("/emojis/{emoji_id}/", response_model=schemas.EmojiAdminOut)
 async def admin_update_emoji(emoji_id: int, payload: schemas.EmojiUpdate, session: SessionDep):
     emoji = await _get_or_404(session, Emoji, emoji_id)

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Page, UserAdminOut } from "@/types/api";
+import { confirmDialog, notify } from "@/lib/dialog";
 
 export default function AdminUsersPage() {
   const [usersPage, setUsersPage] = useState<Page<UserAdminOut> | null>(null);
@@ -69,19 +70,19 @@ export default function AdminUsersPage() {
       setBanReason("");
       await fetchUsers(page);
     } catch (err: any) {
-      alert(err.message || "Failed to ban user");
+      notify(err.message || "Failed to ban user");
     } finally {
       setBanSubmitting(false);
     }
   };
 
   const handleUnbanUser = async (user: UserAdminOut) => {
-    if (!confirm(`Are you sure you want to unban ${user.name} (${user.email})?`)) return;
+    if (!(await confirmDialog(`Are you sure you want to unban ${user.name} (${user.email})?`, { title: "Unban user?", confirmLabel: "Unban", danger: false }))) return;
     try {
       await api.post(`/api/v1/admin/users/${user.id}/unban/`);
       await fetchUsers(page);
     } catch (err: any) {
-      alert(err.message || "Failed to unban user");
+      notify(err.message || "Failed to unban user");
     }
   };
 

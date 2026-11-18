@@ -25,6 +25,7 @@ import {
   SkillAdminOut,
   UploadOut,
 } from "@/types/api";
+import { confirmDialog, notify } from "@/lib/dialog";
 
 type Tab = "experience" | "education" | "contacts" | "skills";
 
@@ -46,6 +47,7 @@ export default function AdminResumePage() {
   const [expDesc, setExpDesc] = useState("");
   const [expStart, setExpStart] = useState("");
   const [expEnd, setExpEnd] = useState("");
+  const [expCurrent, setExpCurrent] = useState(false);
   const [expOrder, setExpOrder] = useState(0);
 
   // Education modal
@@ -56,6 +58,7 @@ export default function AdminResumePage() {
   const [eduDesc, setEduDesc] = useState("");
   const [eduStart, setEduStart] = useState("");
   const [eduEnd, setEduEnd] = useState("");
+  const [eduCurrent, setEduCurrent] = useState(false);
   const [eduOrder, setEduOrder] = useState(0);
 
   // Contact modal
@@ -105,7 +108,7 @@ export default function AdminResumePage() {
       job_title: expJobTitle.trim(),
       description: expDesc.trim() || null,
       start_date: expStart,
-      end_date: expEnd || null,
+      end_date: expCurrent ? null : expEnd || null,
       sort_order: expOrder,
     };
     try {
@@ -117,17 +120,17 @@ export default function AdminResumePage() {
       setExpModal(false);
       await fetchAll();
     } catch (err: any) {
-      alert(err.message || "Failed to save work experience");
+      notify(err.message || "Failed to save work experience");
     }
   };
 
   const deleteExperience = async (id: number) => {
-    if (!confirm("Delete this experience?")) return;
+    if (!(await confirmDialog("Delete this experience?"))) return;
     try {
       await api.delete(`/api/v1/admin/work_experience/${id}/`);
       await fetchAll();
     } catch (err: any) {
-      alert(err.message || "Failed to delete");
+      notify(err.message || "Failed to delete");
     }
   };
 
@@ -139,7 +142,7 @@ export default function AdminResumePage() {
       degree: eduDegree.trim(),
       description: eduDesc.trim() || null,
       start_date: eduStart,
-      end_date: eduEnd || null,
+      end_date: eduCurrent ? null : eduEnd || null,
       sort_order: eduOrder,
     };
     try {
@@ -151,17 +154,17 @@ export default function AdminResumePage() {
       setEduModal(false);
       await fetchAll();
     } catch (err: any) {
-      alert(err.message || "Failed to save education");
+      notify(err.message || "Failed to save education");
     }
   };
 
   const deleteEducation = async (id: number) => {
-    if (!confirm("Delete this education entry?")) return;
+    if (!(await confirmDialog("Delete this education entry?"))) return;
     try {
       await api.delete(`/api/v1/admin/education/${id}/`);
       await fetchAll();
     } catch (err: any) {
-      alert(err.message || "Failed to delete");
+      notify(err.message || "Failed to delete");
     }
   };
 
@@ -183,17 +186,17 @@ export default function AdminResumePage() {
       setContactModal(false);
       await fetchAll();
     } catch (err: any) {
-      alert(err.message || "Failed to save contact");
+      notify(err.message || "Failed to save contact");
     }
   };
 
   const deleteContact = async (id: number) => {
-    if (!confirm("Delete this contact?")) return;
+    if (!(await confirmDialog("Delete this contact?"))) return;
     try {
       await api.delete(`/api/v1/admin/contacts/${id}/`);
       await fetchAll();
     } catch (err: any) {
-      alert(err.message || "Failed to delete");
+      notify(err.message || "Failed to delete");
     }
   };
 
@@ -237,17 +240,17 @@ export default function AdminResumePage() {
       setSkillModal(false);
       await fetchAll();
     } catch (err: any) {
-      alert(err.message || "Failed to save skill");
+      notify(err.message || "Failed to save skill");
     }
   };
 
   const deleteSkill = async (id: number) => {
-    if (!confirm("Delete this skill?")) return;
+    if (!(await confirmDialog("Delete this skill?"))) return;
     try {
       await api.delete(`/api/v1/admin/skills/${id}/`);
       await fetchAll();
     } catch (err: any) {
-      alert(err.message || "Failed to delete");
+      notify(err.message || "Failed to delete");
     }
   };
 
@@ -315,6 +318,7 @@ export default function AdminResumePage() {
                 setExpDesc("");
                 setExpStart("");
                 setExpEnd("");
+                setExpCurrent(false);
                 setExpOrder(0);
                 setExpModal(true);
               }}
@@ -358,6 +362,7 @@ export default function AdminResumePage() {
                             setExpDesc(exp.description || "");
                             setExpStart(exp.start_date);
                             setExpEnd(exp.end_date || "");
+                            setExpCurrent(!exp.end_date);
                             setExpOrder(exp.sort_order);
                             setExpModal(true);
                           }}
@@ -394,6 +399,7 @@ export default function AdminResumePage() {
                 setEduDesc("");
                 setEduStart("");
                 setEduEnd("");
+                setEduCurrent(false);
                 setEduOrder(0);
                 setEduModal(true);
               }}
@@ -437,6 +443,7 @@ export default function AdminResumePage() {
                             setEduDesc(edu.description || "");
                             setEduStart(edu.start_date);
                             setEduEnd(edu.end_date || "");
+                            setEduCurrent(!edu.end_date);
                             setEduOrder(edu.sort_order);
                             setEduModal(true);
                           }}
@@ -674,22 +681,41 @@ export default function AdminResumePage() {
                 className="w-full p-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-subtle)] text-xs text-[var(--text-main)]"
               />
               <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="date"
-                  required
-                  placeholder="Start Date"
-                  value={expStart}
-                  onChange={(e) => setExpStart(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-subtle)] text-xs text-[var(--text-main)]"
-                />
-                <input
-                  type="date"
-                  placeholder="End Date (optional)"
-                  value={expEnd}
-                  onChange={(e) => setExpEnd(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-subtle)] text-xs text-[var(--text-main)]"
-                />
+                <label className="space-y-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Start date</span>
+                  <input
+                    type="date"
+                    required
+                    value={expStart}
+                    onChange={(e) => setExpStart(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-subtle)] text-xs text-[var(--text-main)]"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">End date</span>
+                  <input
+                    type="date"
+                    value={expCurrent ? "" : expEnd}
+                    onChange={(e) => setExpEnd(e.target.value)}
+                    disabled={expCurrent}
+                    required={!expCurrent}
+                    min={expStart || undefined}
+                    className="w-full p-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-subtle)] text-xs text-[var(--text-main)] disabled:opacity-40"
+                  />
+                </label>
               </div>
+              <label className="flex items-center gap-2 text-xs text-[var(--text-main)] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={expCurrent}
+                  onChange={(e) => {
+                    setExpCurrent(e.target.checked);
+                    if (e.target.checked) setExpEnd("");
+                  }}
+                  className="rounded text-orange-600 focus:ring-orange-500"
+                />
+                I currently work here <span className="text-[var(--text-muted)]">(shown as &quot;Present&quot;)</span>
+              </label>
               <textarea
                 placeholder="Description of duties and accomplishments..."
                 value={expDesc}
@@ -749,20 +775,41 @@ export default function AdminResumePage() {
                 className="w-full p-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-subtle)] text-xs text-[var(--text-main)]"
               />
               <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="date"
-                  required
-                  value={eduStart}
-                  onChange={(e) => setEduStart(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-subtle)] text-xs text-[var(--text-main)]"
-                />
-                <input
-                  type="date"
-                  value={eduEnd}
-                  onChange={(e) => setEduEnd(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-subtle)] text-xs text-[var(--text-main)]"
-                />
+                <label className="space-y-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Start date</span>
+                  <input
+                    type="date"
+                    required
+                    value={eduStart}
+                    onChange={(e) => setEduStart(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-subtle)] text-xs text-[var(--text-main)]"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">End date</span>
+                  <input
+                    type="date"
+                    value={eduCurrent ? "" : eduEnd}
+                    onChange={(e) => setEduEnd(e.target.value)}
+                    disabled={eduCurrent}
+                    required={!eduCurrent}
+                    min={eduStart || undefined}
+                    className="w-full p-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-subtle)] text-xs text-[var(--text-main)] disabled:opacity-40"
+                  />
+                </label>
               </div>
+              <label className="flex items-center gap-2 text-xs text-[var(--text-main)] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={eduCurrent}
+                  onChange={(e) => {
+                    setEduCurrent(e.target.checked);
+                    if (e.target.checked) setEduEnd("");
+                  }}
+                  className="rounded text-orange-600 focus:ring-orange-500"
+                />
+                I currently study here <span className="text-[var(--text-muted)]">(shown as &quot;Present&quot;)</span>
+              </label>
               <textarea
                 placeholder="Description / Honors / Specialization..."
                 value={eduDesc}

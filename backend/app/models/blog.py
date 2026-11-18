@@ -126,7 +126,8 @@ class Emoji(IdMixin, CreatedAtMixin, Base):
 
 class Reaction(IdMixin, CreatedAtMixin, Base):
     __tablename__ = "reactions"
-    __table_args__ = (UniqueConstraint("post_id", "user_id", "emoji_id"),)
+    # Bitta foydalanuvchi bitta postga faqat bitta reaksiya qo'ya oladi.
+    __table_args__ = (UniqueConstraint("post_id", "user_id", name="uq_reactions_post_user"),)
 
     post_id: Mapped[int] = mapped_column(IdType, ForeignKey("blog_posts.id", ondelete="CASCADE"))
     user_id: Mapped[int] = mapped_column(IdType, ForeignKey("users.id", ondelete="CASCADE"), index=True)

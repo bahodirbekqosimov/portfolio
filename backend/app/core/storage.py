@@ -54,7 +54,8 @@ async def save_image(file: UploadFile, folder: str) -> str:
 
 
 def delete_file(relative: str | None) -> None:
-    if not relative:
+    # Tashqi havola (masalan Emojipedia rasmi) bizning faylimiz emas.
+    if not relative or relative.startswith(("http://", "https://")):
         return
     root = settings.media_dir.resolve()
     path = (root / relative).resolve()

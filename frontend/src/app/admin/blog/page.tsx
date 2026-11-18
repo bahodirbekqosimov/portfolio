@@ -33,6 +33,7 @@ import {
   PostBlockOut,
   MediaOut,
 } from "@/types/api";
+import { confirmDialog, notify } from "@/lib/dialog";
 
 export default function AdminBlogPage() {
   const [posts, setPosts] = useState<PostAdminListItem[]>([]);
@@ -110,18 +111,18 @@ export default function AdminBlogPage() {
       });
       await fetchPosts(page);
     } catch (err: any) {
-      alert(err.message || "Failed to update status");
+      notify(err.message || "Failed to update status");
     }
   };
 
   // Delete post
   const handleDeletePost = async (postId: number, title: string) => {
-    if (!confirm(`Are you sure you want to delete post "${title}"? This cannot be undone.`)) return;
+    if (!(await confirmDialog(`Are you sure you want to delete post "${title}"? This cannot be undone.`))) return;
     try {
       await api.delete(`/api/v1/admin/blog_posts/${postId}/`);
       await fetchPosts(page);
     } catch (err: any) {
-      alert(err.message || "Failed to delete post");
+      notify(err.message || "Failed to delete post");
     }
   };
 
@@ -153,7 +154,7 @@ export default function AdminBlogPage() {
       // Open editor immediately for the created post
       openEditor(created.id);
     } catch (err: any) {
-      alert(err.message || "Failed to create blog post");
+      notify(err.message || "Failed to create blog post");
     } finally {
       setCreateSubmitting(false);
     }
@@ -194,7 +195,7 @@ export default function AdminBlogPage() {
       setEditBlocks(blocksWithId);
       setEditorTab("editor");
     } catch (err: any) {
-      alert(err.message || "Failed to fetch post details");
+      notify(err.message || "Failed to fetch post details");
     }
   };
 
@@ -240,7 +241,7 @@ export default function AdminBlogPage() {
 
       setMediaAltText("");
     } catch (err: any) {
-      alert(err.message || "Failed to upload image media");
+      notify(err.message || "Failed to upload image media");
     } finally {
       setUploadingMedia(false);
       e.target.value = "";
@@ -292,11 +293,11 @@ export default function AdminBlogPage() {
         content: contentPayload,
       });
 
-      alert("Post saved successfully!");
+      notify("Post saved successfully.", "success");
       setEditingPost(null);
       await fetchPosts(page);
     } catch (err: any) {
-      alert(err.message || "Failed to save post");
+      notify(err.message || "Failed to save post");
     } finally {
       setSavingPost(false);
     }
@@ -312,19 +313,19 @@ export default function AdminBlogPage() {
       setNewTagName("");
       await fetchTags();
     } catch (err: any) {
-      alert(err.message || "Failed to add tag");
+      notify(err.message || "Failed to add tag");
     } finally {
       setCreatingTag(false);
     }
   };
 
   const handleDeleteTag = async (tagId: number, tagName: string) => {
-    if (!confirm(`Delete tag #${tagName}?`)) return;
+    if (!(await confirmDialog(`Delete tag #${tagName}?`))) return;
     try {
       await api.delete(`/api/v1/admin/tags/${tagId}/`);
       await fetchTags();
     } catch (err: any) {
-      alert(err.message || "Failed to delete tag");
+      notify(err.message || "Failed to delete tag");
     }
   };
 

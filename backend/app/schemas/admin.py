@@ -95,6 +95,14 @@ class EmojiUpdate(BaseModel):
     is_active: bool | None = None
 
 
+class EmojiBulkDeleteIn(BaseModel):
+    ids: list[int] = Field(min_length=1, max_length=5000, description="O'chiriladigan emoji id'lari.")
+
+
+class EmojiBulkDeleteOut(BaseModel):
+    deleted: int
+
+
 class EmojiAdminOut(ORMModel):
     id: int
     name: str

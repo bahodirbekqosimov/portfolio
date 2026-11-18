@@ -19,6 +19,7 @@ import { CommentOut, CommentReply, Page } from "@/types/api";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import LoginPromptModal from "@/components/LoginPromptModal";
+import { confirmDialog, notify } from "@/lib/dialog";
 
 interface BlogCommentsProps {
   slug: string;
@@ -128,7 +129,7 @@ export default function BlogComments({ slug, initialCommentsCount }: BlogComment
       setReplyingToId(null);
       await loadComments();
     } catch (err: any) {
-      alert(err.message || "Failed to reply");
+      notify(err.message || "Failed to reply");
     } finally {
       setSubmitting(false);
     }
@@ -145,18 +146,18 @@ export default function BlogComments({ slug, initialCommentsCount }: BlogComment
       setEditText("");
       await loadComments();
     } catch (err: any) {
-      alert(err.message || "Failed to update comment");
+      notify(err.message || "Failed to update comment");
     }
   };
 
   // Delete comment
   const handleDeleteComment = async (commentId: number) => {
-    if (!confirm("Are you sure you want to delete this comment?")) return;
+    if (!(await confirmDialog("Are you sure you want to delete this comment?"))) return;
     try {
       await api.delete(`/api/v1/comments/${commentId}/`);
       await loadComments();
     } catch (err: any) {
-      alert(err.message || "Failed to delete comment");
+      notify(err.message || "Failed to delete comment");
     }
   };
 
@@ -169,16 +170,17 @@ export default function BlogComments({ slug, initialCommentsCount }: BlogComment
         `/api/v1/comments/${complaintTargetId}/complaints/`,
         { reason: complaintReason.trim() }
       );
-      alert(
+      notify(
         res.comment_deleted
           ? "Comment has been automatically removed due to community reports."
-          : "Complaint reported. Thank you for helping keep the discussion civil."
+          : "Complaint reported. Thank you for helping keep the discussion civil.",
+        "success"
       );
       setComplaintTargetId(null);
       setComplaintReason("");
       await loadComments();
     } catch (err: any) {
-      alert(err.message || "Failed to submit report");
+      notify(err.message || "Failed to submit report");
     } finally {
       setComplaintSubmitting(false);
     }

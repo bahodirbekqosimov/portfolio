@@ -74,3 +74,27 @@ async def test_image_paths_are_normalized_and_stable_across_saves(client, admin_
         f"{API}/admin/projects/{project_id}/", json={"image": "https://example.com/a.png"}, headers=admin_headers
     )
     assert external.json()["image"] == "https://example.com/a.png"
+
+
+async def test_contact_saves_with_empty_or_null_image(client, admin_headers):
+    # Admin formasi rasm maydonini bo'sh qoldirsa "" yoki null yuboradi: 500 emas, saqlanishi kerak.
+    created = await client.post(
+        f"{API}/admin/contacts/",
+        json={"name": "GitHub", "data": "https://github.com/example", "image": None, "sort_order": 4},
+        headers=admin_headers,
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["image"] is None
+    contact_id = created.json()["id"]
+
+    for image in ("", None):
+        updated = await client.patch(
+            f"{API}/admin/contacts/{contact_id}/", json={"name": "GitHub", "image": image}, headers=admin_headers
+        )
+        assert updated.status_code == 200, updated.text
+        assert updated.json()["image"] is None
+
+    too_long = await client.patch(
+        f"{API}/admin/contacts/{contact_id}/", json={"image": "https://example.com/" + "a" * 300}, headers=admin_headers
+    )
+    assert too_long.status_code == 422

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { BioIn, BioOut, ProfileImageOut } from "@/types/api";
+import { confirmDialog } from "@/lib/dialog";
 
 const BIO_MAX_LENGTH = 5000;
 const HEADLINE_MAX_LENGTH = 120;
@@ -131,7 +132,7 @@ export default function AdminProfilePage() {
   };
 
   const deleteImage = async () => {
-    if (!confirm("Delete the profile image? It will be removed from the public website.")) return;
+    if (!(await confirmDialog("Delete the profile image? It will be removed from the public website."))) return;
     setImageBusy(true);
     setImageNotice(null);
     try {
@@ -181,7 +182,7 @@ export default function AdminProfilePage() {
   };
 
   const deleteBio = async () => {
-    if (!confirm("Delete the bio? It will be removed from the public website.")) return;
+    if (!(await confirmDialog("Delete the bio? It will be removed from the public website."))) return;
     setBioBusy(true);
     setBioNotice(null);
     try {

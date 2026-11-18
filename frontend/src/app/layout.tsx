@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import DialogHost from "@/components/DialogHost";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://bahodirbek.uz"),
@@ -68,6 +69,7 @@ export default function RootLayout({
               <main className="flex-1 w-full">{children}</main>
               <Footer />
             </div>
+            <DialogHost />
           </ThemeProvider>
         </AuthProvider>
       </body>

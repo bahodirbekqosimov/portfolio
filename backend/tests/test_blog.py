@@ -135,23 +135,52 @@ async def test_reactions_sorted_toggled_and_require_login(client, admin_headers,
 
     ali = await make_user("ali@test.uz")
     vali = await make_user("vali@test.uz")
+    sami = await make_user("sami@test.uz")
     await client.post(url, json={"emoji_id": laugh["id"]}, headers=ali)
-    await client.post(url, json={"emoji_id": love["id"]}, headers=ali)
     await client.post(url, json={"emoji_id": love["id"]}, headers=vali)
+    await client.post(url, json={"emoji_id": love["id"]}, headers=sami)
 
     detail = (await client.get(f"{API}/blog_posts/{post['slug']}/", headers=vali)).json()
     # Ko'pidan kamiga; hech kim bosmagan "unused" chiqmaydi
     assert [(item["name"], item["count"]) for item in detail["reactions"]] == [("love", 2), ("laugh", 1)]
     assert [item["reacted_by_me"] for item in detail["reactions"]] == [True, False]
 
-    # Qayta bosilsa olib tashlanadi; 0 ga tushgani yo'qoladi
-    response = await client.post(url, json={"emoji_id": laugh["id"]}, headers=ali)
+    # Bitta foydalanuvchida bitta reaksiya: boshqa emoji bosilsa eskisi almashtiriladi
+    response = await client.post(url, json={"emoji_id": love["id"]}, headers=ali)
+    assert response.json()["reacted"] is True
+    assert [(item["name"], item["count"], item["reacted_by_me"]) for item in response.json()["reactions"]] == [
+        ("love", 3, True)
+    ]
+
+    # Xuddi shu emoji qayta bosilsa olib tashlanadi
+    response = await client.post(url, json={"emoji_id": love["id"]}, headers=ali)
     assert response.json()["reacted"] is False
-    assert [item["name"] for item in response.json()["reactions"]] == ["love"]
+    assert [(item["name"], item["count"]) for item in response.json()["reactions"]] == [("love", 2)]
 
     # O'chirilgan emojini bosib bo'lmaydi va ko'rinmaydi
     await client.patch(f"{API}/admin/emojis/{love['id']}/", json={"is_active": False}, headers=admin_headers)
     assert (await client.post(url, json={"emoji_id": love["id"]}, headers=ali)).status_code == 404
+    assert (await client.get(f"{API}/blog_posts/{post['slug']}/")).json()["reactions"] == []
+
+
+async def test_admin_bulk_deletes_emojis_with_their_reactions(client, admin_headers, make_post, make_user):
+    post = await make_post("Bulk")
+    keep = await _make_emoji(client, admin_headers, "keep")
+    drop_a = await _make_emoji(client, admin_headers, "drop a")
+    drop_b = await _make_emoji(client, admin_headers, "drop b")
+    user = await make_user("bulk@test.uz")
+    await client.post(f"{API}/blog_posts/{post['slug']}/reactions/", json={"emoji_id": drop_a["id"]}, headers=user)
+
+    url = f"{API}/admin/emojis/bulk_delete/"
+    assert (await client.post(url, json={"ids": [drop_a["id"]]}, headers=user)).status_code == 403
+    assert (await client.post(url, json={"ids": []}, headers=admin_headers)).status_code == 422
+
+    response = await client.post(url, json={"ids": [drop_a["id"], drop_b["id"], 999999]}, headers=admin_headers)
+    assert response.status_code == 200, response.text
+    assert response.json() == {"deleted": 2}
+
+    remaining = (await client.get(f"{API}/admin/emojis/", headers=admin_headers)).json()
+    assert [item["id"] for item in remaining] == [keep["id"]]
     assert (await client.get(f"{API}/blog_posts/{post['slug']}/")).json()["reactions"] == []
 
 

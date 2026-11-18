@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Plus, Smile } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { Plus, Search, Smile } from "lucide-react";
 import { EmojiOut, ReactionSummary } from "@/types/api";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -23,6 +23,20 @@ export default function BlogReactions({
   const [showPicker, setShowPicker] = useState(false);
   const [loadingEmojiId, setLoadingEmojiId] = useState<number | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const closePicker = () => {
+    setShowPicker(false);
+    setSearch("");
+  };
+
+  const filteredEmojis = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return q ? availableEmojis.filter((e) => e.name.toLowerCase().includes(q)) : availableEmojis;
+  }, [availableEmojis, search]);
+
+  // A user has at most one reaction per post; highlight it in the picker.
+  const myEmojiId = reactions.find((r) => r.reacted_by_me)?.emoji_id ?? null;
 
   const handleToggleReaction = async (emojiId: number) => {
     if (!isAuthenticated) {
@@ -31,7 +45,7 @@ export default function BlogReactions({
     }
 
     setLoadingEmojiId(emojiId);
-    setShowPicker(false);
+    closePicker();
     try {
       const res = await api.post<{ reacted: boolean; reactions: ReactionSummary[] }>(
         `/api/v1/blog_posts/${slug}/reactions/`,
@@ -98,35 +112,57 @@ export default function BlogReactions({
           <Plus className="w-3 h-3" />
         </button>
 
-        {/* Emoji Picker Popup */}
+        {/* Emoji Picker Popup: compact, searchable, scrolls inside */}
         {showPicker && (
           <>
-            <div className="fixed inset-0 z-30" onClick={() => setShowPicker(false)} />
-            <div className="absolute left-0 bottom-full mb-2 w-64 p-3 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] shadow-xl z-40 animate-in fade-in zoom-in-95">
-              <div className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">
-                Choose a reaction
+            <div className="fixed inset-0 z-30" onClick={closePicker} />
+            <div
+              className="absolute left-0 bottom-full mb-2 w-[min(20rem,calc(100vw-2rem))] p-2.5 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] shadow-xl z-40 animate-in fade-in zoom-in-95"
+              onKeyDown={(e) => e.key === "Escape" && closePicker()}
+            >
+              <div className="relative mb-2">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                <input
+                  type="search"
+                  autoFocus
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search emoji…"
+                  aria-label="Search emoji"
+                  className="w-full pl-8 pr-2 py-1.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-subtle)] text-xs text-[var(--text-main)] focus:outline-none focus:ring-1 focus:ring-orange-500"
+                />
               </div>
-              <div className="grid grid-cols-4 gap-2">
-                {availableEmojis.map((emoji) => (
-                  <button
-                    key={emoji.id}
-                    onClick={() => handleToggleReaction(emoji.id)}
-                    className="p-2 rounded-xl hover:bg-orange-500/10 border border-transparent hover:border-orange-500/30 flex flex-col items-center justify-center transition-all group"
-                    title={emoji.name}
-                  >
-                    {emoji.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={emoji.image}
-                        alt={emoji.name}
-                        className="w-6 h-6 object-contain group-hover:scale-110 transition-transform"
-                      />
-                    ) : (
-                      <span className="text-base">{emoji.name}</span>
-                    )}
-                  </button>
-                ))}
-              </div>
+              {filteredEmojis.length === 0 ? (
+                <div className="py-6 text-center text-xs text-[var(--text-muted)]">No emoji found</div>
+              ) : (
+                <div className="grid grid-cols-8 gap-0.5 max-h-52 overflow-y-auto overscroll-contain pr-0.5">
+                  {filteredEmojis.map((emoji) => (
+                    <button
+                      key={emoji.id}
+                      onClick={() => handleToggleReaction(emoji.id)}
+                      className={`aspect-square rounded-lg flex items-center justify-center transition-colors ${
+                        emoji.id === myEmojiId
+                          ? "bg-orange-500/20 ring-1 ring-orange-500"
+                          : "hover:bg-orange-500/10"
+                      }`}
+                      title={emoji.name}
+                      aria-label={emoji.name}
+                    >
+                      {emoji.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={emoji.image}
+                          alt=""
+                          loading="lazy"
+                          className="w-6 h-6 object-contain hover:scale-110 transition-transform"
+                        />
+                      ) : (
+                        <span className="text-base">{emoji.name}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </>
         )}

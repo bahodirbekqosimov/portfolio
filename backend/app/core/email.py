@@ -148,11 +148,12 @@ async def _send_code(to: str, template: CodeEmail, code: str) -> None:
         return
 
     # Spam filtrlari Date/Message-ID yo'q, nomsiz va faqat matnli xatlarni shubhali deb biladi.
-    sender_domain = settings.smtp_user.rpartition("@")[2] or None
+    sender = settings.email_sender
+    sender_domain = sender.rpartition("@")[2] or None
     ttl = settings.email_code_ttl_minutes
     brand = settings.email_from_name
     message = EmailMessage()
-    message["From"] = formataddr((brand, settings.smtp_user))
+    message["From"] = formataddr((brand, sender))
     message["To"] = to
     message["Subject"] = subject
     message["Date"] = formatdate(localtime=False, usegmt=True)

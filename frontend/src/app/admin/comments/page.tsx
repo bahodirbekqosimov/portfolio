@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Page, CommentAdminOut } from "@/types/api";
+import { confirmDialog, notify } from "@/lib/dialog";
 
 export default function AdminCommentsPage() {
   const [commentsPage, setCommentsPage] = useState<Page<CommentAdminOut> | null>(null);
@@ -64,18 +65,18 @@ export default function AdminCommentsPage() {
       await api.post(`/api/v1/admin/comments/${commentId}/restore/`);
       await fetchComments(page, filterComplained);
     } catch (err: any) {
-      alert(err.message || "Failed to restore comment");
+      notify(err.message || "Failed to restore comment");
     }
   };
 
   // Delete comment
   const handleDelete = async (commentId: number) => {
-    if (!confirm("Are you sure you want to delete this comment?")) return;
+    if (!(await confirmDialog("Are you sure you want to delete this comment?"))) return;
     try {
       await api.delete(`/api/v1/comments/${commentId}/`);
       await fetchComments(page, filterComplained);
     } catch (err: any) {
-      alert(err.message || "Failed to delete comment");
+      notify(err.message || "Failed to delete comment");
     }
   };
 
