@@ -27,6 +27,7 @@ async def test_cv_collects_only_home_projects_and_skills(client, admin_headers):
     await post("projects", {"title": "Inactive", "description": "d", "show_home": True, "is_active": False})
     await post("work_experience", {"company": "Acme", "job_title": "Backend Developer", "start_date": "2024-01-01"})
     await post("contacts", {"name": "Phone", "data": "tel:+998901234567"})
+    await post("education", {"institution": "Najot Ta'lim", "degree": "Backend Python", "start_date": "2025-07-04"})
     await client.post(
         f"{API}/admin/bio/",
         json={"content": "Hello, I build APIs.", "headline": "Python Backend Engineer"},
@@ -44,6 +45,7 @@ async def test_cv_collects_only_home_projects_and_skills(client, admin_headers):
     assert data.skills == ["Python"]
     assert [item.company for item in data.experience] == ["Acme"]
     assert data.contacts[0].text == "+998 90 123 45 67"
+    assert [(e.job_title, e.company) for e in data.education] == [("Backend Python", "Najot Ta'lim")]
 
     response = await client.get(f"{API}/cv/")
     assert response.status_code == 200

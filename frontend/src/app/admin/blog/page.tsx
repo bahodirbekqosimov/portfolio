@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   BookOpen,
@@ -32,8 +32,32 @@ import {
   PostBlockIn,
   PostBlockOut,
   MediaOut,
+  MediaKind,
 } from "@/types/api";
 import { confirmDialog, notify } from "@/lib/dialog";
+import { BlogMediaBlock, formatBytes } from "@/components/BlogMediaBlock";
+import { EmojiInput, EmojiPickerButton, EmojiText, type EmojiInputHandle } from "@/components/EmojiText";
+
+/** A paragraph block: the text, plus a smiley button that puts a site emoji (:code:) at the cursor. */
+function TextBlockField({ value, onChange }: { value: string; onChange: (text: string) => void }) {
+  const field = useRef<EmojiInputHandle>(null);
+  return (
+    <div className="space-y-1">
+      <EmojiInput
+        ref={field}
+        value={value}
+        onChange={onChange}
+        placeholder="Write paragraph text or formatted content..."
+        rows={4}
+        className="w-full p-3 rounded-lg border border-[var(--border-color)] bg-[var(--bg-card)] text-sm text-[var(--text-main)] focus:outline-none focus:ring-1 focus:ring-orange-500"
+      />
+      <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
+        <EmojiPickerButton target={field} />
+        <span>Insert emoji</span>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminBlogPage() {
   const [posts, setPosts] = useState<PostAdminListItem[]>([]);
@@ -57,7 +81,10 @@ export default function AdminBlogPage() {
   const [editTags, setEditTags] = useState<string[]>([]);
   const [editNewTagInput, setEditNewTagInput] = useState("");
   const [editBlocks, setEditBlocks] = useState<
-    Array<{ id: string; type: "text"; text: string } | { id: string; type: "image"; media_id: number; url?: string; alt_text?: string | null }>
+    Array<
+      | { id: string; type: "text"; text: string }
+      | { id: string; type: "image"; kind: MediaKind; media_id: number; url?: string; alt_text?: string | null; name?: string | null; size?: number | null }
+    >
   >([]);
   const [savingPost, setSavingPost] = useState(false);
   const [editorTab, setEditorTab] = useState<"editor" | "preview">("editor");
@@ -175,14 +202,17 @@ export default function AdminBlogPage() {
       post.media?.forEach((m) => mediaMap.set(m.id, m));
 
       const blocksWithId = (post.content || []).map((b, idx) => {
-        if (b.type === "image") {
+        if (b.type !== "text") {
           const media = mediaMap.get(b.media_id);
           return {
             id: `b-${idx}-${Date.now()}`,
             type: "image" as const,
+            kind: b.type,
             media_id: b.media_id,
             url: b.url || media?.url,
             alt_text: b.alt_text || media?.alt_text,
+            name: b.name ?? media?.name,
+            size: b.size ?? media?.size,
           };
         }
         return {
@@ -233,15 +263,18 @@ export default function AdminBlogPage() {
         {
           id: `b-img-${media.id}-${Date.now()}`,
           type: "image",
+          kind: media.kind ?? "image",
           media_id: media.id,
           url: media.url,
           alt_text: media.alt_text,
+          name: media.name,
+          size: media.size,
         },
       ]);
 
       setMediaAltText("");
     } catch (err: any) {
-      notify(err.message || "Failed to upload image media");
+      notify(err.message || "Failed to upload the file");
     } finally {
       setUploadingMedia(false);
       e.target.value = "";
@@ -280,7 +313,7 @@ export default function AdminBlogPage() {
       // Map blocks back to API contract
       const contentPayload: PostBlockIn[] = editBlocks.map((b) => {
         if (b.type === "image") {
-          return { type: "image", media_id: b.media_id };
+          return { type: b.kind, media_id: b.media_id };
         }
         return { type: "text", text: b.text };
       });
@@ -733,7 +766,7 @@ export default function AdminBlogPage() {
                           Ordered Content Blocks ({editBlocks.length})
                         </h3>
                         <p className="text-xs text-[var(--text-muted)]">
-                          Backend keeps blocks in strict sequence. Consecutive image blocks will be
+                          Pictures, video, music or any file (up to 100 MB). Consecutive pictures are
                           grouped side-by-side automatically.
                         </p>
                       </div>
@@ -750,10 +783,9 @@ export default function AdminBlogPage() {
 
                         <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-orange-600 hover:bg-orange-700 text-white cursor-pointer shadow-sm">
                           <ImageIcon className="w-3.5 h-3.5" />
-                          {uploadingMedia ? "Uploading..." : "Upload Image Block"}
+                          {uploadingMedia ? "Uploading..." : "Upload File Block"}
                           <input
                             type="file"
-                            accept="image/*"
                             onChange={handleUploadImageBlock}
                             disabled={uploadingMedia}
                             className="hidden"
@@ -776,7 +808,7 @@ export default function AdminBlogPage() {
                               ) : (
                                 <ImageIcon className="w-3.5 h-3.5" />
                               )}
-                              Block #{index + 1} — {block.type.toUpperCase()}
+                              Block #{index + 1} — {(block.type === "text" ? "text" : block.kind).toUpperCase()}
                             </span>
 
                             <div className="flex items-center gap-1">
@@ -810,16 +842,10 @@ export default function AdminBlogPage() {
                           </div>
 
                           {block.type === "text" ? (
-                            <textarea
-                              value={block.text}
-                              onChange={(e) => handleUpdateTextBlock(index, e.target.value)}
-                              placeholder="Write paragraph text or formatted content..."
-                              rows={4}
-                              className="w-full p-3 rounded-lg border border-[var(--border-color)] bg-[var(--bg-card)] text-sm text-[var(--text-main)] focus:outline-none focus:ring-1 focus:ring-orange-500"
-                            />
+                            <TextBlockField value={block.text} onChange={(text) => handleUpdateTextBlock(index, text)} />
                           ) : (
                             <div className="flex flex-col sm:flex-row items-center gap-4">
-                              {block.url && (
+                              {block.url && block.kind === "image" && (
                                 <div className="w-24 h-24 rounded-lg overflow-hidden border border-[var(--border-color)] bg-[var(--bg-card)] flex-shrink-0">
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
                                   <img
@@ -829,10 +855,18 @@ export default function AdminBlogPage() {
                                   />
                                 </div>
                               )}
-                              <div className="flex-1 text-xs space-y-1">
+                              {block.url && block.kind === "video" && (
+                                <video src={block.url} controls preload="metadata" className="w-40 max-h-28 rounded-lg bg-black flex-shrink-0" />
+                              )}
+                              {block.url && block.kind === "audio" && (
+                                <audio src={block.url} controls preload="metadata" className="w-60 flex-shrink-0" />
+                              )}
+                              <div className="flex-1 text-xs space-y-1 min-w-0">
                                 <p className="font-mono text-[var(--text-muted)]">
                                   Media ID: {block.media_id}
+                                  {block.size ? ` · ${formatBytes(block.size)}` : ""}
                                 </p>
+                                {block.name && <p className="text-[var(--text-main)] font-semibold truncate">{block.name}</p>}
                                 <p className="text-[var(--text-main)] truncate">
                                   URL: {block.url}
                                 </p>
@@ -847,7 +881,7 @@ export default function AdminBlogPage() {
 
                       {editBlocks.length === 0 && (
                         <div className="p-8 text-center border border-dashed border-[var(--border-color)] rounded-xl text-xs text-[var(--text-muted)]">
-                          No content blocks added yet. Click &quot;Add Text Block&quot; or &quot;Upload Image Block&quot;
+                          No content blocks added yet. Click &quot;Add Text Block&quot; or &quot;Upload File Block&quot;
                           to build this article.
                         </div>
                       )}
@@ -875,9 +909,9 @@ export default function AdminBlogPage() {
                     {editBlocks.map((block, idx) =>
                       block.type === "text" ? (
                         <p key={idx} className="text-base text-[var(--text-main)] leading-relaxed whitespace-pre-line">
-                          {block.text}
+                          <EmojiText text={block.text} />
                         </p>
-                      ) : (
+                      ) : block.kind === "image" ? (
                         <div key={idx} className="my-4">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
@@ -886,6 +920,11 @@ export default function AdminBlogPage() {
                             className="max-h-96 rounded-xl border border-[var(--border-color)]"
                           />
                         </div>
+                      ) : (
+                        <BlogMediaBlock
+                          key={idx}
+                          block={{ type: block.kind, media_id: block.media_id, url: block.url ?? "", alt_text: block.alt_text ?? null, name: block.name, size: block.size }}
+                        />
                       )
                     )}
                   </div>

@@ -16,7 +16,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { Page, PostListItem, TagWithCount } from "@/types/api";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import LoginPromptModal from "@/components/LoginPromptModal";
 
@@ -96,7 +96,8 @@ export default function BlogListClient({
           setBookmarkedSlugs(new Set(bData.items.map((item) => item.slug)));
         }
       } catch (err) {
-        console.error("Failed to load user bookmarks:", err);
+        // Session ended (401): the app signs out by itself; nothing to report.
+        if (!(err instanceof ApiError && err.status === 401)) console.error("Failed to load user bookmarks:", err);
       }
     };
     loadUserBookmarks();

@@ -47,8 +47,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
     };
 
+    // Signed in or out in another tab: follow it here too.
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "access_token" || e.key === null) fetchProfile();
+    };
+
     window.addEventListener("auth:logout", handleLogout);
-    return () => window.removeEventListener("auth:logout", handleLogout);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("auth:logout", handleLogout);
+      window.removeEventListener("storage", handleStorage);
+    };
   }, [fetchProfile]);
 
   const login = async (data: LoginIn): Promise<UserMe> => {

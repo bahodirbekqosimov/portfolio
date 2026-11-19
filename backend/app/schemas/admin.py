@@ -16,7 +16,9 @@ class TextBlockIn(BaseModel):
 
 
 class ImageBlockIn(BaseModel):
-    type: Literal["image"]
+    """Postga yuklangan fayl bloki. Turi (rasm/video/audio/fayl) faylning o'zidan olinadi."""
+
+    type: Literal["image", "video", "audio", "file"]
     media_id: int
 
 
@@ -47,6 +49,10 @@ class MediaOut(ORMModel):
     id: int
     url: RequiredMediaUrl = Field(validation_alias="file")
     alt_text: str | None
+    kind: Literal["image", "video", "audio", "file"] = "image"
+    mime: str | None = None
+    size: int | None = None
+    name: str | None = Field(default=None, validation_alias="original_name")
 
 
 class PostAdminOut(BaseModel):

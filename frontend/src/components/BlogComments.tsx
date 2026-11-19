@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   MessageSquare,
   Send,
@@ -18,6 +18,7 @@ import {
 import { CommentOut, CommentReply, Page } from "@/types/api";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { EmojiInput, EmojiPickerButton, EmojiText, type EmojiInputHandle } from "@/components/EmojiText";
 import LoginPromptModal from "@/components/LoginPromptModal";
 import { confirmDialog, notify } from "@/lib/dialog";
 
@@ -36,6 +37,9 @@ export default function BlogComments({ slug, initialCommentsCount }: BlogComment
 
   // New comment input
   const [newCommentText, setNewCommentText] = useState("");
+  const newCommentRef = useRef<EmojiInputHandle>(null);
+  const replyRef = useRef<EmojiInputHandle>(null);
+  const editRef = useRef<EmojiInputHandle>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -358,13 +362,15 @@ export default function BlogComments({ slug, initialCommentsCount }: BlogComment
                   {/* Root Comment Content */}
                   {editingId === rootComment.id ? (
                     <div className="space-y-2">
-                      <textarea
+                      <EmojiInput
+                        ref={editRef}
                         value={editText}
-                        onChange={(e) => setEditText(e.target.value)}
+                        onChange={setEditText}
                         className="w-full p-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-subtle)] text-sm text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-orange-500"
                         rows={3}
                       />
-                      <div className="flex justify-end gap-2">
+                      <div className="flex items-center justify-end gap-2">
+                        <EmojiPickerButton target={editRef} className="mr-auto" />
                         <button
                           onClick={() => setEditingId(null)}
                           className="px-3 py-1 rounded-lg text-xs font-medium border border-[var(--border-color)]"
@@ -389,7 +395,7 @@ export default function BlogComments({ slug, initialCommentsCount }: BlogComment
                     >
                       {rootComment.is_deleted
                         ? "This comment was removed."
-                        : rootComment.text}
+                        : <EmojiText text={rootComment.text || ""} />}
                     </p>
                   )}
 
@@ -417,14 +423,16 @@ export default function BlogComments({ slug, initialCommentsCount }: BlogComment
                       {/* Reply Input Box */}
                       {replyingToId === rootComment.id && (
                         <div className="mt-3 p-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-subtle)] space-y-2 animate-in fade-in">
-                          <textarea
+                          <EmojiInput
+                            ref={replyRef}
                             value={replyText}
-                            onChange={(e) => setReplyText(e.target.value)}
+                            onChange={setReplyText}
                             placeholder={`Reply to ${rootComment.user?.name || "comment"}...`}
                             className="w-full p-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-card)] text-sm text-[var(--text-main)] focus:outline-none focus:ring-1 focus:ring-orange-500"
                             rows={2}
                           />
-                          <div className="flex justify-end gap-2">
+                          <div className="flex items-center justify-end gap-2">
+                            <EmojiPickerButton target={replyRef} className="mr-auto" />
                             <button
                               onClick={() => setReplyingToId(null)}
                               className="px-3 py-1 rounded-lg text-xs font-medium border border-[var(--border-color)]"
@@ -518,13 +526,15 @@ export default function BlogComments({ slug, initialCommentsCount }: BlogComment
 
                           {editingId === reply.id ? (
                             <div className="space-y-2">
-                              <textarea
+                              <EmojiInput
+                                ref={editRef}
                                 value={editText}
-                                onChange={(e) => setEditText(e.target.value)}
+                                onChange={setEditText}
                                 className="w-full p-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-card)] text-xs text-[var(--text-main)] focus:outline-none focus:ring-1 focus:ring-orange-500"
                                 rows={2}
                               />
-                              <div className="flex justify-end gap-2">
+                              <div className="flex items-center justify-end gap-2">
+                                <EmojiPickerButton target={editRef} className="mr-auto" />
                                 <button
                                   onClick={() => setEditingId(null)}
                                   className="px-2.5 py-1 rounded text-[10px] border border-[var(--border-color)]"
@@ -547,7 +557,7 @@ export default function BlogComments({ slug, initialCommentsCount }: BlogComment
                                   : "text-[var(--text-main)]"
                               }`}
                             >
-                              {reply.is_deleted ? "This reply was removed." : reply.text}
+                              {reply.is_deleted ? "This reply was removed." : <EmojiText text={reply.text || ""} />}
                             </p>
                           )}
                         </div>
@@ -571,9 +581,10 @@ export default function BlogComments({ slug, initialCommentsCount }: BlogComment
             )}
 
             <form onSubmit={handleCreateComment} className="space-y-3">
-              <textarea
+              <EmojiInput
+                ref={newCommentRef}
                 value={newCommentText}
-                onChange={(e) => setNewCommentText(e.target.value)}
+                onChange={setNewCommentText}
                 placeholder={
                   isAuthenticated
                     ? "Share your perspective or ask a question..."
@@ -584,7 +595,10 @@ export default function BlogComments({ slug, initialCommentsCount }: BlogComment
               />
 
               <div className="flex items-center justify-between">
-                <span className="text-xs text-[var(--text-muted)]">
+                <span className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                  {isAuthenticated && (
+                    <EmojiPickerButton target={newCommentRef} />
+                  )}
                   {isAuthenticated
                     ? `Posting as ${user?.name}`
                     : "You will be prompted to sign in"}

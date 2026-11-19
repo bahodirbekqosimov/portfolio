@@ -308,3 +308,65 @@ async def test_admin_search_users_and_comments(client, admin_headers, make_user,
     assert comments["total"] == 1
     nothing = (await client.get(f"{API}/admin/comments/?search=zzz-nothing", headers=admin_headers)).json()
     assert nothing["total"] == 0
+
+
+async def _upload_any(client, headers, post_id, name, data, content_type="application/octet-stream"):
+    response = await client.post(
+        f"{API}/admin/blog_posts/{post_id}/media/", files={"file": (name, data, content_type)}, headers=headers
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+async def test_post_can_hold_video_audio_and_any_file(client, admin_headers, make_post):
+    post = await make_post("Media post")
+    mp4 = b"\x00\x00\x00\x18ftypisom\x00\x00\x02\x00isomiso2" + b"\x00" * 2000
+    mp3 = b"ID3\x04\x00\x00\x00\x00\x00\x00" + b"\xff\xfb\x90\x00" * 500
+    pdf = b"%PDF-1.4\n%test\n" + b"0" * 500
+    page = b"<html><script>alert(1)</script></html>"
+
+    video = await _upload_any(client, admin_headers, post["id"], "klip.mp4", mp4, "video/mp4")
+    audio = await _upload_any(client, admin_headers, post["id"], "qo'shiq.mp3", mp3, "audio/mpeg")
+    doc = await _upload_any(client, admin_headers, post["id"], "rezyume.pdf", pdf, "application/pdf")
+    html = await _upload_any(client, admin_headers, post["id"], "sahifa.html", page, "text/html")
+    image = await _upload_media(client, admin_headers, post["id"])
+
+    assert (video["kind"], video["mime"], video["url"].endswith(".mp4")) == ("video", "video/mp4", True)
+    assert (audio["kind"], audio["mime"], audio["name"]) == ("audio", "audio/mpeg", "qo'shiq.mp3")
+    assert (doc["kind"], doc["url"].endswith(".pdf"), doc["size"]) == ("file", True, len(pdf))
+    # HTML saytimiz nomidan sahifa bo'lib ochilmasligi uchun .bin bo'lib saqlanadi
+    assert (html["kind"], html["url"].endswith(".bin"), html["name"]) == ("file", True, "sahifa.html")
+    assert image["kind"] == "image"
+
+    content = [{"type": kind, "media_id": item["id"]} for kind, item in
+               [("video", video), ("audio", audio), ("file", doc), ("image", image)]]
+    response = await client.patch(
+        f"{API}/admin/blog_posts/{post['id']}/", json={"content": content}, headers=admin_headers
+    )
+    assert response.status_code == 200, response.text
+    detail = (await client.get(f"{API}/blog_posts/{post['slug']}/")).json()
+    assert [(b["type"], b["name"]) for b in detail["content"]] == [
+        ("video", "klip.mp4"), ("audio", "qo'shiq.mp3"), ("file", "rezyume.pdf"), ("image", "a.png")
+    ]
+
+    # Oddiy fayl yuklab olish sifatida beriladi, video esa o'z turida (Range bilan)
+    file_path = "/media/" + doc["url"].split("/media/", 1)[1]
+    got = await client.get(file_path)
+    assert got.headers["content-disposition"] == "attachment" and got.headers["x-content-type-options"] == "nosniff"
+    video_path = "/media/" + video["url"].split("/media/", 1)[1]
+    part = await client.get(video_path, headers={"Range": "bytes=0-99"})
+    assert part.status_code == 206 and len(part.content) == 100 and "content-disposition" not in part.headers
+
+
+async def test_media_upload_size_limit(client, admin_headers, make_post, monkeypatch):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "max_media_mb", 1)
+    post = await make_post("Katta")
+    response = await client.post(
+        f"{API}/admin/blog_posts/{post['id']}/media/",
+        files={"file": ("big.zip", b"PK\x03\x04" + b"0" * (1024 * 1024 + 10), "application/zip")},
+        headers=admin_headers,
+    )
+    assert response.status_code == 413
+

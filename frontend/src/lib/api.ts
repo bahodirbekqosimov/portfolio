@@ -129,6 +129,12 @@ export async function apiFetch<T = any>(
     }
   }
 
+  // 401 with no session left to refresh (signed out in another tab, tokens cleared, user removed):
+  // tell the app, so it stops showing a signed-in state and stops calling private endpoints.
+  if (response.status === 401 && !isAuthEndpoint && !refresh_token && typeof window !== "undefined") {
+    window.dispatchEvent(new Event("auth:logout"));
+  }
+
   if (!response.ok) {
     let errorDetail = "Xatolik yuz berdi.";
     let errorData: any = null;

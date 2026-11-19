@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import SessionDep, require_admin
 from app.core.cv import CvData, CvExperience, CvProject, cv_filename, parse_contact, render_cv
 from app.core.storage import delete_file, save_image
-from app.models import SINGLETON_ID, Bio, Contact, ProfileImage, Project, Skill, User, WorkExperience
+from app.models import SINGLETON_ID, Bio, Contact, Education, ProfileImage, Project, Skill, User, WorkExperience
 from app.schemas.profile import BioIn, BioOut, ErrorOut, ProfileImageOut
 
 PROFILE_FOLDER = "profile"
@@ -194,6 +194,7 @@ async def collect_cv_data(session: AsyncSession) -> CvData:
         .order_by(Project.sort_order, Project.id)
     )
     skills = await session.scalars(select(Skill).where(Skill.show_home).order_by(Skill.sort_order, Skill.id))
+    education = await session.scalars(select(Education).order_by(Education.sort_order, Education.id))
     return CvData(
         name=admin.name if admin else "Portfolio",
         headline=bio.headline if bio else None,
@@ -206,6 +207,9 @@ async def collect_cv_data(session: AsyncSession) -> CvData:
             CvProject(p.title, p.description, p.link, [s.name for s in p.skills]) for p in projects
         ],
         skills=[s.name for s in skills],
+        education=[
+            CvExperience(e.degree or "", e.institution, e.description, e.start_date, e.end_date) for e in education
+        ],
     )
 
 
@@ -222,7 +226,7 @@ async def download_cv(
 ):
     """Portfolio'dan avtomatik yig'iladigan CV.
 
-    Manbalar: admin ismi, bio va headline, contacts, work experience, `show_home=true` va faol
+    Manbalar: admin ismi, bio va headline, contacts, work experience, education, `show_home=true` va faol
     projectlar, `show_home=true` skilllar. Alohida saqlanmaydi, har so'rovda yangidan yasaladi.
     """
     data = await collect_cv_data(session)

@@ -2,7 +2,7 @@
 
 CV alohida saqlanmaydi: har so'rovda bazadan yig'iladi, shuning uchun yangi project, skill,
 ish joyi yoki bio qo'shilsa CV o'zi yangilanadi. Dizayn foydalanuvchi bergan shablonga mos:
-ism + lavozim, kontaktlar, Profile, Experience, Projects, Technical Skills.
+ism + lavozim, kontaktlar, Profile, Experience, Projects, Education, Technical Skills.
 """
 
 import re
@@ -60,6 +60,8 @@ class CvData:
     experience: list[CvExperience]
     projects: list[CvProject]
     skills: list[str]
+    # Ta'lim ish tajribasi bilan bir xil ko'rinishda: daraja (qalin), muassasa (rangli), davr.
+    education: list[CvExperience] = field(default_factory=list)
 
 
 def parse_contact(label: str, raw: str) -> CvContact:
@@ -148,7 +150,13 @@ class CvRenderer:
             self._section("Projects")
             for project in self.data.projects:
                 self._project(project)
+        if self.data.education:
+            self._section("Education")
+            for item in self.data.education:
+                self._experience(item)
         if self.data.skills:
+            # Sarlavha bir sahifada, ro'yxat keyingisida qolmasin: bo'lim bir butun joylashadi.
+            self._keep_together(15 + self._skills_rows(self.data.skills) * 8)
             self._section("Technical Skills")
             self._skills_grid(self.data.skills)
         return bytes(self.pdf.output())
@@ -203,6 +211,21 @@ class CvRenderer:
         pdf.line(pdf.l_margin, y, pdf.l_margin + self.width, y)
         pdf.ln(3)
 
+    LINE = 5
+
+    def _paragraph_height(self, text: str, indent: float = 0, size: float = 10) -> float:
+        """Matn qancha joy olishini oldindan o'lchaydi (yozuv sahifalar orasida bo'linmasligi uchun)."""
+        pdf = self.pdf
+        pdf.set_font(FONT, "", size)
+        height = 0.0
+        for block in text.strip().splitlines():
+            if not block.strip():
+                height += 2
+                continue
+            lines = pdf.multi_cell(self.width - indent, self.LINE, block.strip(), dry_run=True, output="LINES")
+            height += len(lines) * self.LINE
+        return height
+
     def _paragraph(self, text: str, indent: float = 0, size: float = 10) -> None:
         pdf = self.pdf
         pdf.set_text_color(*TEXT)
@@ -212,7 +235,7 @@ class CvRenderer:
             if not block.strip():
                 pdf.ln(2)
                 continue
-            pdf.multi_cell(self.width - indent, 5, block.strip(), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            pdf.multi_cell(self.width - indent, self.LINE, block.strip(), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     def _keep_together(self, height: float) -> None:
         if self.pdf.get_y() + height > self.pdf.h - PAGE_MARGIN:
@@ -220,15 +243,16 @@ class CvRenderer:
 
     def _experience(self, item: CvExperience) -> None:
         pdf = self.pdf
-        self._keep_together(18)
         indent = 4
+        body = self._paragraph_height(item.description, indent + 4) if item.description else 0
+        self._keep_together(6.5 + body + 2.5)
         pdf.set_x(pdf.l_margin + indent)
         period = _period(item.start_date, item.end_date)
         pdf.set_font(FONT, "", 9)
         period_width = pdf.get_string_width(period) + 1 if period else 0
         pdf.set_font(FONT, "B", 11)
         pdf.set_text_color(*TEXT)
-        title = f"{item.job_title} "
+        title = f"{item.job_title} " if item.job_title else ""
         pdf.cell(pdf.get_string_width(title), 6, title)
         pdf.set_text_color(*ACCENT)
         pdf.cell(pdf.get_string_width(item.company), 6, item.company)
@@ -282,25 +306,35 @@ class CvRenderer:
             pdf.cell(width + gap, 5, skill)
         pdf.ln(5)
 
+    def _skill_columns(self, skills: list[str]) -> int:
+        # Uzun skill nomlari sig'ishi uchun kerak bo'lsa ustun sonini kamaytiramiz.
+        self.pdf.set_font(FONT, "", 12)
+        columns = SKILL_COLUMNS
+        while columns > 2 and max(self.pdf.get_string_width(s) for s in skills) > self.width / columns - 2:
+            columns -= 1
+        return columns
+
+    def _skills_rows(self, skills: list[str]) -> int:
+        columns = self._skill_columns(skills)
+        return -(-len(skills) // columns)
+
     def _skills_grid(self, skills: list[str]) -> None:
         pdf = self.pdf
         pdf.set_text_color(*TEXT)
         size = 12
+        row = 8
+        columns = self._skill_columns(skills)
         pdf.set_font(FONT, "", size)
-        # Uzun skill nomlari sig'ishi uchun kerak bo'lsa ustun sonini kamaytiramiz.
-        columns = SKILL_COLUMNS
-        while columns > 2 and max(pdf.get_string_width(s) for s in skills) > self.width / columns - 2:
-            columns -= 1
         column_width = self.width / columns
         for start in range(0, len(skills), columns):
-            self._keep_together(8)
+            self._keep_together(row)
             pdf.set_x(pdf.l_margin)
             for skill in skills[start : start + columns]:
                 text = skill
                 while pdf.get_string_width(text) > column_width - 2 and len(text) > 3:
                     text = text[:-2] + "…"
-                pdf.cell(column_width, 8, text, align="C")
-            pdf.ln(8)
+                pdf.cell(column_width, row, text, align="C")
+            pdf.ln(row)
 
 
 def render_cv(data: CvData) -> bytes:

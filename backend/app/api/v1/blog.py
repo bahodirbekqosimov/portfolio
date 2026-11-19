@@ -46,10 +46,19 @@ PUBLISHED = BlogPost.status == PostStatus.published
 
 
 def serialize_blocks(blocks: list[PostBlock]) -> list[TextBlockOut | ImageBlockOut]:
+    """Matn yoki fayl bloki; fayl blokining turi (image/video/audio/file) faylning o'zidan."""
     return [
         TextBlockOut(text=block.text)
         if block.type == BlockType.text
-        else ImageBlockOut(media_id=block.media_id, url=block.media.file, alt_text=block.media.alt_text)
+        else ImageBlockOut(
+            type=block.media.kind or "image",
+            media_id=block.media_id,
+            url=block.media.file,
+            alt_text=block.media.alt_text,
+            name=block.media.original_name,
+            mime=block.media.mime,
+            size=block.media.size,
+        )
         for block in blocks
     ]
 

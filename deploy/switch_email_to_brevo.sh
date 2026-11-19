@@ -42,6 +42,19 @@ read -r -s -p "SMTP key (ekranda ko'rinmaydi): " SMTP_KEY
 echo
 read -r -p "Sinov xati qaysi manzilga yuborilsin: " TEST_TO
 [[ -n "$SMTP_LOGIN" && -n "$SMTP_KEY" && -n "$TEST_TO" ]] || { echo "Hamma maydon to'ldirilishi kerak"; exit 1; }
+if [[ "$SMTP_LOGIN" == xsmtpsib-* ]]; then
+    echo "XATO: login maydoniga KALIT kiritildi. Login '...@smtp-brevo.com' ko'rinishida bo'ladi."
+    echo "Kalit ekranda ko'rinib qoldi: Brevo'da uni o'chirib, yangisini yarating."
+    exit 1
+fi
+if [[ "$SMTP_LOGIN" != *@* ]]; then
+    echo "XATO: login '...@smtp-brevo.com' ko'rinishida bo'lishi kerak (Brevo SMTP sahifasidagi 'Login')."
+    exit 1
+fi
+if [[ "$SMTP_KEY" != xsmtpsib-* ]]; then
+    echo "XATO: kalit 'xsmtpsib-' bilan boshlanishi kerak (SMTP key, API key emas)."
+    exit 1
+fi
 
 NEW_ENV=$(mktemp "$HOME/portfolio/.backend.env.XXXXXX")
 chmod 600 "$NEW_ENV"

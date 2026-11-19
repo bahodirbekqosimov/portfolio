@@ -29,6 +29,20 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def media_headers(request: Request, call_next):
+    """Yuklangan fayllar faqat o'z turida ochiladi (nosniff); blogdagi oddiy fayllar (posts/files/) sahifa
+    sifatida emas, yuklab olish sifatida beriladi."""
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/media/"):
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        if path.startswith("/media/posts/files/"):
+            response.headers["Content-Disposition"] = "attachment"
+            response.headers["Content-Security-Policy"] = "sandbox"
+    return response
+
+
 @app.exception_handler(IntegrityError)
 async def integrity_error_handler(_: Request, __: IntegrityError) -> JSONResponse:
     return JSONResponse(

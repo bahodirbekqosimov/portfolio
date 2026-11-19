@@ -19,6 +19,8 @@ class Settings(BaseSettings):
 
     media_dir: Path = Path("media")
     max_upload_mb: int = 10
+    # Blog fayllari (video, audio, hujjat). Cloudflare bepul tarifi bitta so'rovni 100 MB bilan cheklaydi.
+    max_media_mb: int = 100
 
     smtp_host: str = "smtp.gmail.com"
     smtp_port: int = 587

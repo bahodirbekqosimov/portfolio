@@ -3,12 +3,14 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Bookmark, Calendar, Eye, Tag, Share2, Check } from "lucide-react";
-import { PostDetail, EmojiOut, PostBlockOut, Page, PostListItem } from "@/types/api";
+import { PostDetail, EmojiOut, ImageBlockOut, PostBlockOut, Page, PostListItem } from "@/types/api";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import BlogReactions from "@/components/BlogReactions";
 import BlogComments from "@/components/BlogComments";
 import LoginPromptModal from "@/components/LoginPromptModal";
+import { BlogMediaBlock } from "@/components/BlogMediaBlock";
+import { EmojiText } from "@/components/EmojiText";
 
 interface BlogPostDetailClientProps {
   post: PostDetail;
@@ -88,7 +90,7 @@ export default function BlogPostDetailClient({
    */
   const renderContentBlocks = (blocks: PostBlockOut[]) => {
     const renderedElements: React.ReactNode[] = [];
-    let currentImageGroup: Extract<PostBlockOut, { type: "image" }>[] = [];
+    let currentImageGroup: ImageBlockOut[] = [];
 
     const flushImageGroup = (keyPrefix: number) => {
       if (currentImageGroup.length === 0) return;
@@ -129,6 +131,9 @@ export default function BlogPostDetailClient({
     blocks.forEach((block, index) => {
       if (block.type === "image") {
         currentImageGroup.push(block);
+      } else if (block.type !== "text") {
+        flushImageGroup(index);
+        renderedElements.push(<BlogMediaBlock key={`media-${index}`} block={block} />);
       } else {
         flushImageGroup(index);
         renderedElements.push(
@@ -136,7 +141,7 @@ export default function BlogPostDetailClient({
             key={`text-${index}`}
             className="my-4 text-base sm:text-lg text-[var(--text-main)] leading-relaxed whitespace-pre-line"
           >
-            {block.text}
+            <EmojiText text={block.text} emojis={availableEmojis} />
           </div>
         );
       }

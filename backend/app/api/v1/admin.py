@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.api.deps import SessionDep, require_admin
 from app.api.v1.blog import _like, serialize_blocks
 from app.api.v1.comments import soft_delete
-from app.core.storage import delete_file, media_url, save_image
+from app.core.storage import delete_file, media_url, save_image, save_media
 from app.models import (
     BlockType,
     BlogPost,
@@ -115,14 +115,14 @@ async def _resolve_tags(session: AsyncSession, names: list[str]) -> list[Tag]:
 
 
 async def _replace_blocks(session: AsyncSession, post_id: int, blocks: list) -> None:
-    media_ids = {block.media_id for block in blocks if block.type == "image"}
+    media_ids = {block.media_id for block in blocks if block.type != "text"}
     if media_ids:
         owned = set(
             await session.scalars(select(Media.id).where(Media.post_id == post_id, Media.id.in_(media_ids)))
         )
         if missing := media_ids - owned:
             raise HTTPException(
-                status.HTTP_400_BAD_REQUEST, f"These images do not belong to this post: {sorted(missing)}"
+                status.HTTP_400_BAD_REQUEST, f"These files do not belong to this post: {sorted(missing)}"
             )
     await session.execute(delete(PostBlock).where(PostBlock.post_id == post_id))
     for position, block in enumerate(blocks):
@@ -130,9 +130,10 @@ async def _replace_blocks(session: AsyncSession, post_id: int, blocks: list) -> 
             PostBlock(
                 post_id=post_id,
                 position=position,
-                type=BlockType(block.type),
+                # Rasm, video, audio va fayl bloklari bazada bitta "image" (media) turi: turini fayl o'zi biladi.
+                type=BlockType.text if block.type == "text" else BlockType.image,
                 text=block.text if block.type == "text" else None,
-                media_id=block.media_id if block.type == "image" else None,
+                media_id=block.media_id if block.type != "text" else None,
             )
         )
 
@@ -219,8 +220,13 @@ async def admin_upload_media(
     session: SessionDep,
     alt_text: Annotated[str | None, Form(max_length=255)] = None,
 ):
+    """Istalgan fayl: rasm (10 MB gacha), video, audio yoki hujjat (100 MB gacha). Turi mazmunidan aniqlanadi."""
     await _get_or_404(session, BlogPost, post_id)
-    media = Media(post_id=post_id, file=await save_image(file, "posts"), alt_text=alt_text)
+    saved = await save_media(file, "posts")
+    media = Media(
+        post_id=post_id, file=saved.path, alt_text=alt_text, kind=saved.kind, mime=saved.mime,
+        size=saved.size, original_name=saved.original_name,
+    )
     session.add(media)
     await session.commit()
     return media
@@ -230,7 +236,7 @@ async def admin_upload_media(
 async def admin_delete_media(media_id: int, session: SessionDep):
     media = await _get_or_404(session, Media, media_id)
     if await session.scalar(select(PostBlock.id).where(PostBlock.media_id == media_id).limit(1)):
-        raise HTTPException(status.HTTP_409_CONFLICT, "This image is used in the post content. Remove it from the content first.")
+        raise HTTPException(status.HTTP_409_CONFLICT, "This file is used in the post content. Remove it from the content first.")
     await session.delete(media)
     await session.commit()
     delete_file(media.file)

@@ -82,7 +82,7 @@ class BlogPost(IdMixin, TimestampMixin, Base):
 
 
 class Media(IdMixin, CreatedAtMixin, Base):
-    """Postga tegishli yuklangan rasm."""
+    """Postga yuklangan fayl: rasm, video, audio yoki istalgan boshqa fayl (kind)."""
 
     __tablename__ = "media"
 
@@ -91,6 +91,11 @@ class Media(IdMixin, CreatedAtMixin, Base):
     )
     file: Mapped[str] = mapped_column(String(255))
     alt_text: Mapped[str | None] = mapped_column(String(255))
+    # image | video | audio | file — mazmunidan aniqlanadi (storage.save_media).
+    kind: Mapped[str] = mapped_column(String(10), default="image", server_default="image")
+    mime: Mapped[str | None] = mapped_column(String(100))
+    size: Mapped[int | None] = mapped_column(Integer)
+    original_name: Mapped[str | None] = mapped_column(String(255))
 
 
 class PostBlock(IdMixin, Base):

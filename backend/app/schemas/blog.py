@@ -27,14 +27,22 @@ class TextBlockOut(BaseModel):
     text: str
 
 
-class ImageBlockOut(BaseModel):
-    type: Literal["image"] = "image"
+class MediaBlockOut(BaseModel):
+    """Rasm, video, audio yoki yuklab olinadigan fayl. `type` faylning turiga qarab keladi."""
+
+    type: Literal["image", "video", "audio", "file"] = "image"
     media_id: int
     url: RequiredMediaUrl
     alt_text: str | None
+    name: str | None = None
+    mime: str | None = None
+    size: int | None = None
 
 
-ContentBlockOut = Annotated[TextBlockOut | ImageBlockOut, Field(discriminator="type")]
+# Eski nom: rasm bloklari ham shu model.
+ImageBlockOut = MediaBlockOut
+
+ContentBlockOut = Annotated[TextBlockOut | MediaBlockOut, Field(discriminator="type")]
 
 
 class ReactionSummary(BaseModel):

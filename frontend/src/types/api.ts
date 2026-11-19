@@ -361,16 +361,22 @@ export interface TextBlockOut {
   text: string;
 }
 
+export type MediaKind = "image" | "video" | "audio" | "file";
+
 export interface ImageBlockIn {
-  type: "image";
+  type: MediaKind;
   media_id: number;
 }
 
+/** A file block: picture, video, audio or a downloadable file (`type` comes from the file itself). */
 export interface ImageBlockOut {
-  type: "image";
+  type: MediaKind;
   media_id: number;
   url: string;
   alt_text: string | null;
+  name?: string | null;
+  mime?: string | null;
+  size?: number | null;
 }
 
 export type PostBlockIn = TextBlockIn | ImageBlockIn;
@@ -402,6 +408,10 @@ export interface MediaOut {
   id: number;
   url: string;
   alt_text: string | null;
+  kind?: MediaKind;
+  mime?: string | null;
+  size?: number | null;
+  name?: string | null;
 }
 
 export interface PostAdminListItem {

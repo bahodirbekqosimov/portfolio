@@ -81,3 +81,10 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(160, 160, 160, 0.45);
 }
+
+/* Emoji text field (components/EmojiText.tsx): placeholder like a textarea */
+.emoji-input:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-subtle);
+  pointer-events: none;
+}
