@@ -49,11 +49,13 @@ function TextBlockField({ value, onChange }: { value: string; onChange: (text: s
         onChange={onChange}
         placeholder="Write paragraph text or formatted content..."
         rows={4}
+        links
         className="w-full p-3 rounded-lg border border-[var(--border-color)] bg-[var(--bg-card)] text-sm text-[var(--text-main)] focus:outline-none focus:ring-1 focus:ring-orange-500"
       />
       <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
         <EmojiPickerButton target={field} />
         <span>Insert emoji</span>
+        <span className="ml-auto">Select text, Ctrl+L: link</span>
       </div>
     </div>
   );
@@ -907,7 +909,7 @@ export default function AdminBlogPage() {
                     {editBlocks.map((block, idx) =>
                       block.type === "text" ? (
                         <p key={idx} className="text-base text-[var(--text-main)] leading-relaxed whitespace-pre-line">
-                          <EmojiText text={block.text} />
+                          <EmojiText text={block.text} links />
                         </p>
                       ) : block.kind === "image" ? (
                         <div key={idx} className="my-4">

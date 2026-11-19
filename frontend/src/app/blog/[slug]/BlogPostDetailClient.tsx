@@ -141,7 +141,7 @@ export default function BlogPostDetailClient({
             key={`text-${index}`}
             className="my-4 text-base sm:text-lg text-[var(--text-main)] leading-relaxed whitespace-pre-line"
           >
-            <EmojiText text={block.text} emojis={availableEmojis} />
+            <EmojiText text={block.text} emojis={availableEmojis} links />
           </div>
         );
       }

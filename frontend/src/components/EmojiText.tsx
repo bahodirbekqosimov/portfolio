@@ -42,33 +42,101 @@ function useEmojiMap(seed?: EmojiOut[]) {
 
 const CODE = /:e(\d{1,9}):/g;
 
-/** Text with :e12: codes drawn as emoji pictures. Unknown ids (deleted emojis) stay as written. */
-export function EmojiText({ text, emojis }: { text: string; emojis?: EmojiOut[] }) {
-  const map = useEmojiMap(emojis);
-  if (!text.includes(":") || map.size === 0) return <>{text}</>;
-  const parts: React.ReactNode[] = [];
-  let last = 0;
-  for (const match of text.matchAll(CODE)) {
-    const emoji = map.get(Number(match[1]));
-    if (!emoji) continue;
-    const at = match.index ?? 0;
-    if (at > last) parts.push(text.slice(last, at));
-    parts.push(
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        key={at}
-        src={emoji.image}
-        alt={emoji.name}
-        title={emoji.name}
-        loading="lazy"
-        draggable={false}
-        className="inline-block h-[1.35em] w-[1.35em] align-[-0.3em] object-contain mx-[0.05em]"
-      />
-    );
-    last = at + match[0].length;
+/* Links in blog text: [text](url). Only web, mail and site-relative addresses, so no javascript: links. */
+const LINK = /\[([^\]\n]+)\]\(((?:https?:\/\/|mailto:|\/)[^\s()]*)\)/g;
+const LINK_CLASS =
+  "text-[var(--primary-orange,#f97316)] underline underline-offset-2 decoration-1 hover:opacity-80 break-words";
+
+/** A typed or pasted address made usable as a link: "www.x.uz" / "x.uz/page" → "https://…". Null if it is not one. */
+export function toHref(raw: string): string | null {
+  const t = raw.trim();
+  if (!t || /\s/.test(t)) return null;
+  if (/^(https?:\/\/|mailto:)\S+$/i.test(t)) return t;
+  if (/^\/[^\s]*$/.test(t)) return t;
+  if (/^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(t)) return `https://${t}`;
+  return null;
+}
+
+type Piece = { kind: "text"; text: string } | { kind: "emoji"; emoji: EmojiOut } | { kind: "link"; href: string; label: Piece[] };
+
+/** Text → pieces: plain text, emoji pictures, and (when `links`) links whose label may hold emojis. */
+function pieces(text: string, map: Map<number, EmojiOut>, links: boolean): Piece[] {
+  const out: Piece[] = [];
+  const emojisIn = (t: string) => {
+    let last = 0;
+    for (const m of t.matchAll(CODE)) {
+      const emoji = map.get(Number(m[1]));
+      if (!emoji) continue;
+      const at = m.index ?? 0;
+      if (at > last) out.push({ kind: "text", text: t.slice(last, at) });
+      out.push({ kind: "emoji", emoji });
+      last = at + m[0].length;
+    }
+    if (last < t.length) out.push({ kind: "text", text: t.slice(last) });
+  };
+  if (!links) {
+    emojisIn(text);
+    return out;
   }
-  if (last < text.length) parts.push(text.slice(last));
-  return <>{parts}</>;
+  let last = 0;
+  for (const m of text.matchAll(LINK)) {
+    const at = m.index ?? 0;
+    emojisIn(text.slice(last, at));
+    out.push({ kind: "link", href: m[2], label: pieces(m[1], map, false) });
+    last = at + m[0].length;
+  }
+  emojisIn(text.slice(last));
+  return out;
+}
+
+const isExternal = (href: string) => {
+  if (!/^https?:\/\//i.test(href)) return false;
+  try {
+    return typeof window === "undefined" || new URL(href).host !== window.location.host;
+  } catch {
+    return true;
+  }
+};
+
+function renderPieces(list: Piece[], keyBase = ""): React.ReactNode[] {
+  return list.map((p, i) => {
+    const key = `${keyBase}${i}`;
+    if (p.kind === "text") return <React.Fragment key={key}>{p.text}</React.Fragment>;
+    if (p.kind === "emoji")
+      return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={key}
+          src={p.emoji.image}
+          alt={p.emoji.name}
+          title={p.emoji.name}
+          loading="lazy"
+          draggable={false}
+          className="inline-block h-[1.35em] w-[1.35em] align-[-0.3em] object-contain mx-[0.05em]"
+        />
+      );
+    const external = isExternal(p.href);
+    return (
+      <a
+        key={key}
+        href={p.href}
+        className={LINK_CLASS}
+        {...(external ? { target: "_blank", rel: "noopener noreferrer nofollow" } : {})}
+      >
+        {renderPieces(p.label, `${key}-`)}
+      </a>
+    );
+  });
+}
+
+/**
+ * Text with :e12: codes drawn as emoji pictures. Unknown ids (deleted emojis) stay as written.
+ * With `links` (blog text), [text](url) is drawn as a link.
+ */
+export function EmojiText({ text, emojis, links = false }: { text: string; emojis?: EmojiOut[]; links?: boolean }) {
+  const map = useEmojiMap(emojis);
+  if (!text.includes(":") && !(links && text.includes("]("))) return <>{text}</>;
+  return <>{renderPieces(pieces(text, map, links))}</>;
 }
 
 /* ---------- editing: a field that shows emoji pictures while typing ---------- */
@@ -92,20 +160,21 @@ function emojiImg(emoji: EmojiOut): HTMLImageElement {
   return img;
 }
 
-/** Text with :e12: codes → HTML for the editable field (emoji pictures, line breaks). */
-function toHtml(text: string, map: Map<number, EmojiOut>): string {
-  let html = "";
-  let last = 0;
-  for (const match of text.matchAll(CODE)) {
-    const emoji = map.get(Number(match[1]));
-    if (!emoji) continue;
-    const at = match.index ?? 0;
-    html += escapeHtml(text.slice(last, at));
-    html += `<img src="${escapeHtml(emoji.image)}" alt="${escapeHtml(emoji.name)}" data-code="${emojiCode(emoji)}" draggable="false" class="${IMG_CLASS}">`;
-    last = at + match[0].length;
-  }
-  html += escapeHtml(text.slice(last));
-  return html.replace(/\n/g, "<br>");
+const escapeAttr = (t: string) => escapeHtml(t).replace(/"/g, "&quot;");
+
+/** Text with :e12: codes (and [text](url) links) → HTML for the editable field. */
+function toHtml(text: string, map: Map<number, EmojiOut>, links = false): string {
+  const draw = (list: Piece[]): string =>
+    list
+      .map((p) =>
+        p.kind === "text"
+          ? escapeHtml(p.text)
+          : p.kind === "emoji"
+            ? `<img src="${escapeAttr(p.emoji.image)}" alt="${escapeAttr(p.emoji.name)}" data-code="${emojiCode(p.emoji)}" draggable="false" class="${IMG_CLASS}">`
+            : `<a href="${escapeAttr(p.href)}" data-href="${escapeAttr(p.href)}" title="${escapeAttr(p.href)}" class="${LINK_CLASS}">${draw(p.label)}</a>`
+      )
+      .join("");
+  return draw(pieces(text, map, links)).replace(/\n/g, "<br>");
 }
 
 /** The editable field's content back to plain text with :e12: codes. */
@@ -123,6 +192,15 @@ function toText(root: HTMLElement): string {
     }
     if (node.tagName === "BR") {
       out += "\n";
+      return;
+    }
+    const href = node.tagName === "A" ? node.dataset.href || node.getAttribute("href") : null;
+    if (href && !node.parentElement?.closest("a")) {
+      const before = out;
+      out = "";
+      node.childNodes.forEach(walk);
+      const label = out.replace(/[\]\n]/g, " ");
+      out = before + (label.trim() ? `[${label}](${href})` : "");
       return;
     }
     const block = node !== root && (node.tagName === "DIV" || node.tagName === "P");
@@ -145,6 +223,7 @@ export function EmojiInput({
   rows = 3,
   className = "",
   emojis,
+  links = false,
 }: {
   ref?: React.Ref<EmojiInputHandle>;
   value: string;
@@ -153,6 +232,8 @@ export function EmojiInput({
   rows?: number;
   className?: string;
   emojis?: EmojiOut[];
+  /** Blog text: select some text and press Ctrl+L (⌘L) to make it a link; again on a link removes it. */
+  links?: boolean;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const saved = useRef<Range | null>(null);
@@ -166,10 +247,10 @@ export function EmojiInput({
     const el = box.current;
     if (!el) return;
     if (toText(el) !== value || drawnWith.current !== map) {
-      el.innerHTML = toHtml(value, map);
+      el.innerHTML = toHtml(value, map, links);
       drawnWith.current = map;
     }
-  }, [value, map]);
+  }, [value, map, links]);
 
   // Remember the cursor while the field has it: a picker button takes the focus away before it inserts.
   useEffect(() => {
@@ -188,6 +269,50 @@ export function EmojiInput({
     // Everything deleted: drop the leftover <br> so the placeholder shows again.
     if (!el.textContent && !el.querySelector("img")) el.innerHTML = "";
     onChange(toText(el));
+  };
+
+  /** Ctrl+L: the selection becomes a link (its own text if that is an address, else asks for one); on a link, unlinks. */
+  const toggleLink = () => {
+    const el = box.current;
+    const sel = window.getSelection();
+    if (!el || !sel || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    if (!el.contains(range.commonAncestorContainer)) return;
+    const startEl = range.startContainer instanceof Element ? range.startContainer : range.startContainer.parentElement;
+    const existing = startEl?.closest("a");
+    if (existing && el.contains(existing)) {
+      const parent = existing.parentNode!;
+      while (existing.firstChild) parent.insertBefore(existing.firstChild, existing);
+      parent.removeChild(existing);
+      emit();
+      return;
+    }
+    if (range.collapsed) return;
+    const selected = range.toString();
+    let href = toHref(selected);
+    if (!href) {
+      const typed = window.prompt("Link address (https://…)", "https://");
+      if (typed === null) return;
+      href = toHref(typed);
+      if (!href) return;
+    }
+    const a = document.createElement("a");
+    a.href = href;
+    a.dataset.href = href;
+    a.title = href;
+    a.className = LINK_CLASS;
+    a.appendChild(range.extractContents());
+    a.querySelectorAll("a").forEach((inner) => inner.replaceWith(...Array.from(inner.childNodes)));
+    range.insertNode(a);
+    // put the cursor just after the link, outside it, so further typing is plain text
+    const after = document.createTextNode("");
+    a.after(after);
+    const next = document.createRange();
+    next.setStart(after, 0);
+    next.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(next);
+    emit();
   };
 
   useImperativeHandle(ref, () => ({
@@ -229,7 +354,19 @@ export function EmojiInput({
         e.preventDefault();
         document.execCommand("insertText", false, e.clipboardData.getData("text/plain"));
       }}
+      onClick={(e) => {
+        // a link in the field is for editing: ctrl/⌘-click opens it, a plain click only places the cursor
+        const a = (e.target as HTMLElement).closest("a");
+        if (!a) return;
+        e.preventDefault();
+        if (e.ctrlKey || e.metaKey) window.open(a.getAttribute("href") ?? "", "_blank", "noopener,noreferrer");
+      }}
       onKeyDown={(e) => {
+        if (links && (e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "l") {
+          e.preventDefault();
+          toggleLink();
+          return;
+        }
         if (e.key === "Enter" && !e.nativeEvent.isComposing) {
           e.preventDefault();
           document.execCommand("insertLineBreak");
