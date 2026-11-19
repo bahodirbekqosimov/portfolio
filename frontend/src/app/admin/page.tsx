@@ -226,8 +226,6 @@ export default function AdminOverviewPage() {
                   <div className="space-y-1 min-w-0">
                     <div className="font-semibold text-[var(--text-main)] truncate">{post.title}</div>
                     <div className="text-[var(--text-muted)] flex items-center gap-2">
-                      <span>{post.views_count} views</span>
-                      <span>•</span>
                       <span>slug: {post.slug}</span>
                     </div>
                   </div>

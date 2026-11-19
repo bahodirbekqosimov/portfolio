@@ -403,7 +403,6 @@ export default function AdminBlogPage() {
               <tr>
                 <th className="py-3 px-4">Title & Slug</th>
                 <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Views</th>
                 <th className="py-3 px-4">Created Date</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
@@ -411,13 +410,13 @@ export default function AdminBlogPage() {
             <tbody className="divide-y divide-[var(--border-color)]">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-[var(--text-muted)]">
+                  <td colSpan={4} className="py-8 text-center text-[var(--text-muted)]">
                     Loading posts...
                   </td>
                 </tr>
               ) : posts.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-[var(--text-muted)]">
+                  <td colSpan={4} className="py-8 text-center text-[var(--text-muted)]">
                     No blog posts yet. Click &quot;New Post&quot; to write your first article.
                   </td>
                 </tr>
@@ -448,7 +447,6 @@ export default function AdminBlogPage() {
                         {post.status}
                       </button>
                     </td>
-                    <td className="py-3.5 px-4 text-[var(--text-muted)]">{post.views_count}</td>
                     <td className="py-3.5 px-4 text-[var(--text-muted)]">
                       {new Date(post.created_at).toLocaleDateString("en-US", {
                         year: "numeric",

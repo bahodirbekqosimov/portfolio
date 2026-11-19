@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Bookmark, Calendar, Eye, Tag, Share2, Check } from "lucide-react";
+import { Bookmark, Calendar, Tag, Share2, Check } from "lucide-react";
 import { PostDetail, EmojiOut, ImageBlockOut, PostBlockOut, Page, PostListItem } from "@/types/api";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -190,10 +190,6 @@ export default function BlogPostDetailClient({
                 <time dateTime={post.published_at}>{formatDate(post.published_at)}</time>
               </span>
             )}
-            <span className="flex items-center gap-1.5">
-              <Eye className="w-4 h-4 text-orange-500" />
-              {post.views_count} views
-            </span>
           </div>
 
           <div className="flex items-center gap-2">
