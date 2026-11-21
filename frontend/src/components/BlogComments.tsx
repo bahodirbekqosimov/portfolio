@@ -88,6 +88,30 @@ export default function BlogComments({ slug, initialCommentsCount }: BlogComment
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isExpanded, slug]);
 
+  /* Opening the comments scrolls the page down a little, so the "Comments" heading sits near the top
+     (under the fixed navbar) and the comments are in view. Waits for them to load so the page is tall enough. */
+  const headerRef = useRef<HTMLDivElement>(null);
+  const scrollOnOpen = useRef<"no" | "opened" | "loading">("no");
+  const openComments = () => {
+    scrollOnOpen.current = "opened";
+    setIsExpanded(true);
+  };
+  useEffect(() => {
+    if (!isExpanded || scrollOnOpen.current === "no") return;
+    if (loading) {
+      scrollOnOpen.current = "loading";
+      return;
+    }
+    if (scrollOnOpen.current !== "loading") return;
+    scrollOnOpen.current = "no";
+    const el = headerRef.current;
+    if (!el) return;
+    const top = el.getBoundingClientRect().top + window.scrollY - 96;
+    if (top <= window.scrollY) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top, behavior: reduce ? "auto" : "smooth" });
+  }, [isExpanded, loading]);
+
   // Create root comment
   const handleCreateComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -251,9 +275,9 @@ export default function BlogComments({ slug, initialCommentsCount }: BlogComment
       )}
 
       {/* Expand/Collapse Button */}
-      <div className="flex items-center justify-between">
+      <div ref={headerRef} className="flex items-center justify-between">
         <button
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={() => (isExpanded ? setIsExpanded(false) : openComments())}
           className="inline-flex items-center gap-2 text-lg sm:text-xl font-bold text-[var(--text-main)] hover:text-orange-500 transition-colors"
         >
           <MessageSquare className="w-5 h-5 text-orange-500" />
@@ -263,7 +287,7 @@ export default function BlogComments({ slug, initialCommentsCount }: BlogComment
 
         {!isExpanded && (
           <button
-            onClick={() => setIsExpanded(true)}
+            onClick={openComments}
             className="text-xs sm:text-sm font-semibold text-orange-500 hover:text-orange-600 transition-colors"
           >
             Leave a response
