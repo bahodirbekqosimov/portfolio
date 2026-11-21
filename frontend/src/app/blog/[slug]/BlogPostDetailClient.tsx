@@ -94,26 +94,21 @@ export default function BlogPostDetailClient({
 
     const flushImageGroup = (keyPrefix: number) => {
       if (currentImageGroup.length === 0) return;
-      const count = currentImageGroup.length;
-      const gridClass =
-        count === 1
-          ? "grid-cols-1"
-          : count === 2
-          ? "grid-cols-1 sm:grid-cols-2"
-          : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3";
-
+      // Every image keeps its own size: never stretched, cropped or squeezed into columns.
+      // Only one wider than the article is scaled down (keeping its proportions) so it fits the screen.
+      // Small images that fit side by side sit next to each other.
       renderedElements.push(
-        <div key={`img-group-${keyPrefix}`} className={`grid ${gridClass} gap-4 my-6`}>
+        <div key={`img-group-${keyPrefix}`} className="flex flex-wrap justify-center items-start gap-4 my-6">
           {currentImageGroup.map((imgBlock, idx) => (
             <figure
               key={`img-${keyPrefix}-${idx}`}
-              className="rounded-xl overflow-hidden border border-[var(--border-color)] bg-[var(--bg-subtle)] shadow-sm"
+              className="m-0 w-fit max-w-full rounded-xl overflow-hidden border border-[var(--border-color)] bg-[var(--bg-subtle)] shadow-sm"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={imgBlock.url}
                 alt={imgBlock.alt_text || post.title}
-                className="w-full h-auto max-h-[460px] object-cover"
+                className="block m-0 max-w-full h-auto"
                 loading="lazy"
               />
               {imgBlock.alt_text && (
@@ -220,13 +215,11 @@ export default function BlogPostDetailClient({
 
       {/* Main Cover Image if present */}
       {post.image && (
-        <div className="w-full max-h-[480px] rounded-2xl overflow-hidden border border-[var(--border-color)] bg-[var(--bg-subtle)] shadow-sm">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={post.image}
-            alt={post.title}
-            className="w-full h-full object-cover"
-          />
+        <div className="flex justify-center">
+          <div className="w-fit max-w-full rounded-2xl overflow-hidden border border-[var(--border-color)] bg-[var(--bg-subtle)] shadow-sm">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={post.image} alt={post.title} className="block max-w-full h-auto" />
+          </div>
         </div>
       )}
 

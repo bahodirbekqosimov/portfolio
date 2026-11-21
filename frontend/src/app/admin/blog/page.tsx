@@ -917,7 +917,7 @@ export default function AdminBlogPage() {
                           <img
                             src={block.url}
                             alt={block.alt_text || editTitle}
-                            className="max-h-96 rounded-xl border border-[var(--border-color)]"
+                            className="block max-w-full h-auto mx-auto rounded-xl border border-[var(--border-color)]"
                           />
                         </div>
                       ) : (
